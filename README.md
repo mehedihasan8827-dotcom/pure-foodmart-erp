@@ -35,6 +35,7 @@ corepack enable                 # provides pnpm
 pnpm install
 docker compose up -d            # Postgres 16 + Redis (local only)
 cp .env.example .env            # fill local values; real secrets stay in the host's secret manager
+pnpm db:migrate && pnpm db:seed # apply schema + chart of accounts
 pnpm build && pnpm test
 pnpm dev:api                    # http://localhost:3000/api/v1/health
 pnpm dev:web                    # http://localhost:5173
@@ -45,9 +46,9 @@ pnpm dev:web                    # http://localhost:5173
 | Batch | Scope | Status |
 |-------|-------|--------|
 | B0 | Monorepo scaffold, docker-compose, CI, app skeletons | ✅ done |
-| B1 | Database migrations + seed (blueprint §9, §3) | ⏳ next |
-| B2 | Ledger core (posting engine, hash chain) | — |
-| B3 | Inventory/BOM engine | — |
+| B1 | Database migrations + seed (blueprint §9, §3) | ✅ done |
+| B2 | Ledger core (posting engine, hash chain, DB-enforced invariants) | ✅ done |
+| B3 | Inventory/BOM engine | ⏳ next |
 | B4 | Nuport pipeline | — |
 | B5 | Steadfast pipeline | — |
 | B6–B13 | Portals, auth, frontend, Android, deployment | — |

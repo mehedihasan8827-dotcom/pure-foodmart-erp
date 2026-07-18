@@ -1,0 +1,14 @@
+{
+  "name": "@pfm/db",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "migrate": "node migrate.mjs up",
+    "seed": "node migrate.mjs seed",
+    "status": "node migrate.mjs status"
+  },
+  "dependencies": {
+    "pg": "^8.13.1"
+  }
+}

@@ -15,6 +15,9 @@
   "scripts": {
     "build": "pnpm -r run build",
     "test": "pnpm -r run test",
+    "db:migrate": "pnpm --filter @pfm/db migrate",
+    "db:seed": "pnpm --filter @pfm/db seed",
+    "db:status": "pnpm --filter @pfm/db status",
     "typecheck": "pnpm -r run typecheck",
     "dev:api": "pnpm --filter @pfm/api dev",
     "dev:worker": "pnpm --filter @pfm/worker dev",

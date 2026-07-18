@@ -8,6 +8,22 @@ on:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgres://erp:erp_local_dev@localhost:5432/pure_foodmart_erp
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: erp
+          POSTGRES_PASSWORD: erp_local_dev
+          POSTGRES_DB: pure_foodmart_erp
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U erp -d pure_foodmart_erp"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
     steps:
       - uses: actions/checkout@v4
 
@@ -22,6 +38,9 @@ jobs:
 
       - name: Install
         run: pnpm install --frozen-lockfile
+
+      - name: Apply database migrations + seed
+        run: pnpm db:migrate && pnpm db:seed
 
       - name: Build all workspaces
         run: pnpm build
