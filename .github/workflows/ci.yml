@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Build all workspaces
+        run: pnpm build
+
+      - name: Test all workspaces
+        run: pnpm test
+
+      - name: API boot smoke check
+        run: |
+          node apps/api/dist/main.js &
+          API_PID=$!
+          for i in $(seq 1 20); do
+            if curl -fsS http://localhost:3000/api/v1/health > /dev/null 2>&1; then
+              echo "health check passed"
+              kill $API_PID
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "API failed to become healthy" >&2
+          kill $API_PID || true
+          exit 1
+
+      - name: Worker boot smoke check
+        run: WORKER_RUN_ONCE=1 node apps/worker/dist/main.js

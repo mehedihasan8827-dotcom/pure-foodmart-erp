@@ -1,0 +1,25 @@
+# dependencies
+node_modules/
+
+# builds
+dist/
+build/
+coverage/
+*.tsbuildinfo
+
+# environment — real secrets NEVER enter this repo
+.env
+.env.*
+!.env.example
+
+# logs & OS noise
+*.log
+.DS_Store
+
+# local tooling
+.turbo/
+.vite/
+
+# Capacitor / Android (generated in B12)
+apps/web/android/app/build/
+apps/web/android/.gradle/
