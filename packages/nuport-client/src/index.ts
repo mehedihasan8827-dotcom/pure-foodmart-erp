@@ -1,6 +1,9 @@
 /**
- * @pfm/nuport-client — Typed Nuport OMS API client — auth, pagination, backoff (arrives in B4, blueprint §2.2)
- *
- * B0 scaffold stub: real implementation lands in B4.
+ * @pfm/nuport-client — typed Nuport OMS API client: auth headers,
+ * retry/backoff, pagination, raw→canonical mapping (blueprint §2.2).
  */
-export const PACKAGE = "@pfm/nuport-client";
+export {
+  NuportApiError,
+  NuportClient,
+  type NuportClientConfig,
+} from "./client";

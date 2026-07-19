@@ -1,4 +1,10 @@
 export { Money } from "./money";
+export {
+  canonicalNuportOrderSchema,
+  nuportOrderStatusSchema,
+  type CanonicalNuportOrder,
+  type NuportOrderStatus,
+} from "./nuport";
 
 /**
  * Shared domain types grow here batch by batch:

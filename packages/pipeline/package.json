@@ -1,5 +1,5 @@
 {
-  "name": "@pfm/domain",
+  "name": "@pfm/pipeline",
   "version": "0.1.0",
   "private": true,
   "main": "dist/index.js",
@@ -10,10 +10,14 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "zod": "^3.24.1"
+    "@pfm/domain": "workspace:*",
+    "@pfm/inventory": "workspace:*",
+    "@pfm/ledger": "workspace:*",
+    "pg": "^8.13.1"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
+    "@types/pg": "^8.11.10",
     "typescript": "^5.7.2",
     "vitest": "^2.1.8"
   }

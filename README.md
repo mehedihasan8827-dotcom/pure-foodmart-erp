@@ -59,6 +59,6 @@ pnpm dev:web                    # http://localhost:5173
 | B2 | Ledger core (posting engine, hash chain, DB-enforced invariants) | ✅ done |
 | B2.5 | Multi-tenant SaaS refactor: RLS isolation, tenant provisioning, RBAC model | ✅ done |
 | B3 | Inventory/BOM engine (MWA costing, merge-explosion, COGS auto-deduction) | ✅ done |
-| B4 | Nuport pipeline | ⏳ next |
-| B5 | Steadfast pipeline | — |
+| B4 | Nuport pipeline (client, webhook receiver, state machine, cron loop) | ✅ done |
+| B5 | Steadfast pipeline | ⏳ next |
 | B6–B13 | Portals, auth, frontend, Android, deployment | — |

@@ -1,16 +1,12 @@
 import "dotenv/config";
+import { Pool } from "pg";
+import { startNuportWorker } from "./processors/nuport.worker";
 
 /**
- * Worker process skeleton (B0).
- *
- * BullMQ queues and the real processors arrive per roadmap §18.3:
- *  B4 → nuport-event processor, order revenue+COGS pipeline, cron pullers
- *  B5 → steadfast status/invoice/balance pollers, settlement auto-poster
- *  B6 → depreciation job
- *  B2+ → integrity verifier, hash-chain verifier
- *
- * For now it boots, heartbeats, and shuts down cleanly so process
- * supervision and deploys can be wired and tested end to end.
+ * Worker process. Live consumers so far (roadmap §18.3):
+ *  B4 → nuport-events queue consumer (requires REDIS_URL)
+ * Still to come: Steadfast pollers + settlement poster (B5),
+ * depreciation job (B6), integrity + hash-chain verifiers.
  */
 
 const HEARTBEAT_MS = 60_000;
@@ -20,7 +16,20 @@ function log(message: string): void {
   console.log(`[worker] ${new Date().toISOString()} ${message}`);
 }
 
-log("Pure Foodmart ERP worker booted (B0 skeleton — processors arrive in B4/B5)");
+const pool = new Pool({
+  connectionString:
+    process.env.DATABASE_URL ??
+    "postgres://erp:erp_local_dev@localhost:5432/pure_foodmart_erp",
+  max: 5,
+});
+
+const redisUrl = process.env.REDIS_URL;
+const nuportWorker = redisUrl ? startNuportWorker(pool, redisUrl) : null;
+log(
+  nuportWorker
+    ? "booted — nuport-events consumer running"
+    : "booted — no REDIS_URL; queue consumers idle (webhooks process inline, cron covers the rest)",
+);
 
 if (process.env.WORKER_RUN_ONCE === "1") {
   log("WORKER_RUN_ONCE=1 → exiting after boot check");
@@ -29,11 +38,13 @@ if (process.env.WORKER_RUN_ONCE === "1") {
 
 const heartbeat = setInterval(() => log("heartbeat"), HEARTBEAT_MS);
 
-function shutdown(signal: string): void {
+async function shutdown(signal: string): Promise<void> {
   log(`received ${signal}, shutting down`);
   clearInterval(heartbeat);
+  await nuportWorker?.close();
+  await pool.end();
   process.exit(0);
 }
 
-process.on("SIGINT", () => shutdown("SIGINT"));
-process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => void shutdown("SIGINT"));
+process.on("SIGTERM", () => void shutdown("SIGTERM"));

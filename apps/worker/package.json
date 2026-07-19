@@ -10,10 +10,16 @@
   },
   "dependencies": {
     "@pfm/domain": "workspace:*",
-    "dotenv": "^16.4.7"
+    "@pfm/nuport-client": "workspace:*",
+    "@pfm/pipeline": "workspace:*",
+    "bullmq": "^5.34.3",
+    "dotenv": "^16.4.7",
+    "ioredis": "^5.4.2",
+    "pg": "^8.13.1"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
+    "@types/pg": "^8.11.10",
     "typescript": "^5.7.2"
   }
 }
