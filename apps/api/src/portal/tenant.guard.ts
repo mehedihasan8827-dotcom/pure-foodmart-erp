@@ -1,34 +1,11 @@
-import {
-  BadRequestException,
-  CanActivate,
-  createParamDecorator,
-  ExecutionContext,
-  Injectable,
-} from "@nestjs/common";
+import { createParamDecorator, ExecutionContext } from "@nestjs/common";
 
 /**
- * DEV-ONLY tenant scoping: trusts the X-Tenant-Id header.
- * B7 replaces this with session auth resolving tenant membership + role
- * from tenant_users — this guard exists so the portal endpoints are
- * exercisable end-to-end before the auth batch lands. Do NOT expose
- * publicly until B7 ships.
+ * Injects the tenant id resolved and authorized by TenantRoleGuard
+ * (../auth/roles.guard). The B6 dev-mode header guard is gone: since B7,
+ * X-Tenant-Id is only honored for authenticated members of that tenant
+ * (or audited super-admin overrides).
  */
-@Injectable()
-export class TenantContextGuard implements CanActivate {
-  canActivate(context: ExecutionContext): boolean {
-    const req = context.switchToHttp().getRequest();
-    const raw = req.headers["x-tenant-id"];
-    const tenantId = Number(Array.isArray(raw) ? raw[0] : raw);
-    if (!Number.isInteger(tenantId) || tenantId <= 0) {
-      throw new BadRequestException(
-        "X-Tenant-Id header required (dev mode; replaced by auth in B7)",
-      );
-    }
-    req.tenantId = tenantId;
-    return true;
-  }
-}
-
 export const TenantId = createParamDecorator(
   (_data: unknown, context: ExecutionContext): number =>
     context.switchToHttp().getRequest().tenantId as number,

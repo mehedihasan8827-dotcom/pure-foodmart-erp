@@ -26,9 +26,17 @@ import {
 } from "@pfm/portals";
 import type { Pool } from "pg";
 import { z } from "zod";
+import {
+  inviteToTenant,
+  requireFreshTotp,
+  type SessionPrincipal,
+} from "@pfm/auth";
 import { PG_POOL } from "../db/database.module";
+import { AuthErrorFilter } from "../auth/auth-error.filter";
+import { AuthGuard, CurrentUser } from "../auth/auth.guard";
+import { Roles, TenantRoleGuard } from "../auth/roles.guard";
 import { PortalErrorFilter } from "./portal-error.filter";
-import { TenantContextGuard, TenantId } from "./tenant.guard";
+import { TenantId } from "./tenant.guard";
 import { parseBody } from "./zod";
 
 const money = z.string().regex(/^\d+(\.\d{1,2})?$/, "money as decimal string");
@@ -37,8 +45,9 @@ const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 const period = z.string().regex(/^\d{4}-\d{2}$/);
 
 @Controller("portal/expenses")
-@UseGuards(TenantContextGuard)
-@UseFilters(PortalErrorFilter)
+@UseGuards(AuthGuard, TenantRoleGuard)
+@UseFilters(PortalErrorFilter, AuthErrorFilter)
+@Roles("TENANT_ADMIN", "ACCOUNTANT", "STAFF")
 export class ExpensesController {
   constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
   @Post()
@@ -59,8 +68,9 @@ export class ExpensesController {
 }
 
 @Controller("portal/purchases")
-@UseGuards(TenantContextGuard)
-@UseFilters(PortalErrorFilter)
+@UseGuards(AuthGuard, TenantRoleGuard)
+@UseFilters(PortalErrorFilter, AuthErrorFilter)
+@Roles("TENANT_ADMIN", "ACCOUNTANT", "STAFF")
 export class PurchasesController {
   constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
   @Post()
@@ -92,8 +102,9 @@ export class PurchasesController {
 }
 
 @Controller("portal/equity")
-@UseGuards(TenantContextGuard)
-@UseFilters(PortalErrorFilter)
+@UseGuards(AuthGuard, TenantRoleGuard)
+@UseFilters(PortalErrorFilter, AuthErrorFilter)
+@Roles("TENANT_ADMIN")
 export class EquityController {
   constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
 
@@ -146,8 +157,9 @@ const cashTxSchema = z.object({
 });
 
 @Controller("portal/assets")
-@UseGuards(TenantContextGuard)
-@UseFilters(PortalErrorFilter)
+@UseGuards(AuthGuard, TenantRoleGuard)
+@UseFilters(PortalErrorFilter, AuthErrorFilter)
+@Roles("TENANT_ADMIN", "ACCOUNTANT")
 export class AssetsController {
   constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
 
@@ -196,8 +208,9 @@ export class AssetsController {
 }
 
 @Controller("portal/stock-counts")
-@UseGuards(TenantContextGuard)
-@UseFilters(PortalErrorFilter)
+@UseGuards(AuthGuard, TenantRoleGuard)
+@UseFilters(PortalErrorFilter, AuthErrorFilter)
+@Roles("TENANT_ADMIN", "ACCOUNTANT", "STAFF")
 export class StockCountsController {
   constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
   @Post()
@@ -215,28 +228,72 @@ export class StockCountsController {
 }
 
 @Controller("portal/close")
-@UseGuards(TenantContextGuard)
-@UseFilters(PortalErrorFilter)
+@UseGuards(AuthGuard, TenantRoleGuard)
+@UseFilters(PortalErrorFilter, AuthErrorFilter)
+@Roles("TENANT_ADMIN")
 export class CloseController {
   constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
 
   @Get(":period/checklist")
+  @Roles("TENANT_ADMIN", "ACCOUNTANT", "STAFF", "VIEWER")
   checklist(@TenantId() tenantId: number, @Param("period") p: string) {
     return runCloseChecklist(this.pool, tenantId, parseBody(period, p));
   }
 
   @Post(":period")
-  close(@TenantId() tenantId: number, @Param("period") p: string) {
-    return closePeriod(this.pool, tenantId, parseBody(period, p), null);
-  }
-
-  @Post(":period/unlock")
-  unlock(
+  async close(
     @TenantId() tenantId: number,
+    @CurrentUser() principal: SessionPrincipal,
     @Param("period") p: string,
     @Body() body: unknown,
   ) {
-    const dto = parseBody(z.object({ reason: z.string().min(3) }), body);
-    return unlockPeriod(this.pool, tenantId, parseBody(period, p), null, dto.reason);
+    const dto = parseBody(z.object({ totpCode: z.string().optional() }), body ?? {});
+    await requireFreshTotp(this.pool, principal.userId, dto.totpCode);
+    return closePeriod(this.pool, tenantId, parseBody(period, p), principal.userId);
+  }
+
+  @Post(":period/unlock")
+  async unlock(
+    @TenantId() tenantId: number,
+    @CurrentUser() principal: SessionPrincipal,
+    @Param("period") p: string,
+    @Body() body: unknown,
+  ) {
+    const dto = parseBody(
+      z.object({ reason: z.string().min(3), totpCode: z.string().optional() }),
+      body,
+    );
+    await requireFreshTotp(this.pool, principal.userId, dto.totpCode);
+    return unlockPeriod(this.pool, tenantId, parseBody(period, p), principal.userId, dto.reason);
+  }
+}
+
+@Controller("portal/users")
+@UseGuards(AuthGuard, TenantRoleGuard)
+@UseFilters(PortalErrorFilter, AuthErrorFilter)
+@Roles("TENANT_ADMIN")
+export class UsersController {
+  constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
+
+  @Post()
+  invite(
+    @TenantId() tenantId: number,
+    @CurrentUser() principal: SessionPrincipal,
+    @Body() body: unknown,
+  ) {
+    const dto = parseBody(
+      z.object({
+        email: z.string().email(),
+        fullName: z.string().min(1),
+        temporaryPassword: z.string().min(10),
+        role: z.enum(["TENANT_ADMIN", "ACCOUNTANT", "STAFF", "VIEWER"]),
+      }),
+      body,
+    );
+    return inviteToTenant(this.pool, {
+      ...dto,
+      tenantId,
+      invitedBy: principal.userId,
+    });
   }
 }

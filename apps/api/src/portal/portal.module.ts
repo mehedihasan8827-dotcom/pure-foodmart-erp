@@ -6,6 +6,7 @@ import {
   ExpensesController,
   PurchasesController,
   StockCountsController,
+  UsersController,
 } from "./portal.controllers";
 
 @Module({
@@ -16,6 +17,7 @@ import {
     AssetsController,
     StockCountsController,
     CloseController,
+    UsersController,
   ],
 })
 export class PortalModule {}
