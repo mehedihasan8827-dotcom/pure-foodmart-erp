@@ -1,0 +1,12 @@
+# Fly.io config — worker (queues, Steadfast pollers, depreciation cron).
+#   fly deploy -c infra/fly.worker.toml -a <your-prefix>-pfm-worker
+app = "CHANGE-ME-pfm-worker"
+primary_region = "sin"
+
+[build]
+  dockerfile = "infra/worker.Dockerfile"
+
+# No HTTP service — it's a background process. Must stay running.
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"

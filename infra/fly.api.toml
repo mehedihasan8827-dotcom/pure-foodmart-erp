@@ -1,0 +1,27 @@
+# Fly.io config — API service. Deploy from the repo root:
+#   fly deploy -c infra/fly.api.toml -a <your-prefix>-pfm-api
+# App names are globally unique on Fly: pick a prefix and keep it everywhere.
+app = "CHANGE-ME-pfm-api"
+primary_region = "sin"
+
+[build]
+  dockerfile = "infra/api.Dockerfile"
+
+[http_service]
+  internal_port = 3000
+  force_https = true
+  auto_stop_machines = false     # webhooks + SSE want a warm machine
+  auto_start_machines = true
+  min_machines_running = 1
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"
+
+[checks]
+  [checks.health]
+    type = "http"
+    port = 3000
+    path = "/api/v1/health"
+    interval = "30s"
+    timeout = "5s"

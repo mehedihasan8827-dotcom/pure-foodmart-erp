@@ -1,0 +1,20 @@
+# Fly.io config — web app (nginx static + /api proxy to the API service).
+#   fly deploy -c infra/fly.web.toml -a <your-prefix>-pfm-web
+# Set the proxy target BEFORE deploying (Fly private networking):
+#   fly secrets set -a <your-prefix>-pfm-web API_UPSTREAM=http://<your-prefix>-pfm-api.internal:3000
+app = "CHANGE-ME-pfm-web"
+primary_region = "sin"
+
+[build]
+  dockerfile = "infra/web.Dockerfile"
+
+[http_service]
+  internal_port = 80
+  force_https = true
+  auto_stop_machines = true      # static assets — cold starts are fine
+  auto_start_machines = true
+  min_machines_running = 0
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"
