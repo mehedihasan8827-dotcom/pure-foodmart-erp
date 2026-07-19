@@ -12,6 +12,7 @@
     "@pfm/domain": "workspace:*",
     "@pfm/nuport-client": "workspace:*",
     "@pfm/pipeline": "workspace:*",
+    "@pfm/portals": "workspace:*",
     "bullmq": "^5.34.3",
     "dotenv": "^16.4.7",
     "ioredis": "^5.4.2",

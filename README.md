@@ -61,5 +61,6 @@ pnpm dev:web                    # http://localhost:5173
 | B3 | Inventory/BOM engine (MWA costing, merge-explosion, COGS auto-deduction) | ✅ done |
 | B4 | Nuport pipeline (client, webhook receiver, state machine, cron loop) | ✅ done |
 | B5 | Steadfast pipeline (client, status poller, 3-stage fund settlement, CSV fallback, drift checks) | ✅ done |
-| B6 | Portals API (expenses, purchases, equity, assets, close) | ⏳ next |
-| B7–B13 | Auth, frontend, Android, deployment | — |
+| B6 | Portals API (expenses, purchases, equity, assets + depreciation, stock counts, period close) | ✅ done |
+| B7 | Auth & RBAC (replaces dev X-Tenant-Id header) | ⏳ next |
+| B8–B13 | Frontend, Android, deployment | — |

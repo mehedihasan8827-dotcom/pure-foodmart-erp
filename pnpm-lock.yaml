@@ -22,12 +22,18 @@ importers:
       '@pfm/domain':
         specifier: workspace:*
         version: link:../../packages/domain
+      '@pfm/inventory':
+        specifier: workspace:*
+        version: link:../../packages/inventory
       '@pfm/ledger':
         specifier: workspace:*
         version: link:../../packages/ledger
       '@pfm/pipeline':
         specifier: workspace:*
         version: link:../../packages/pipeline
+      '@pfm/portals':
+        specifier: workspace:*
+        version: link:../../packages/portals
       bullmq:
         specifier: ^5.34.3
         version: 5.80.9
@@ -105,6 +111,9 @@ importers:
       '@pfm/pipeline':
         specifier: workspace:*
         version: link:../../packages/pipeline
+      '@pfm/portals':
+        specifier: workspace:*
+        version: link:../../packages/portals
       bullmq:
         specifier: ^5.34.3
         version: 5.80.9
@@ -224,6 +233,37 @@ importers:
       '@pfm/ledger':
         specifier: workspace:*
         version: link:../ledger
+      pg:
+        specifier: ^8.13.1
+        version: 8.22.0
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.2
+        version: 22.20.1
+      '@types/pg':
+        specifier: ^8.11.10
+        version: 8.20.0
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.20.1)
+
+  packages/portals:
+    dependencies:
+      '@pfm/domain':
+        specifier: workspace:*
+        version: link:../domain
+      '@pfm/inventory':
+        specifier: workspace:*
+        version: link:../inventory
+      '@pfm/ledger':
+        specifier: workspace:*
+        version: link:../ledger
+      '@pfm/pipeline':
+        specifier: workspace:*
+        version: link:../pipeline
       pg:
         specifier: ^8.13.1
         version: 8.22.0
