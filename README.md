@@ -64,5 +64,5 @@ pnpm dev:web                    # http://localhost:5173
 | B6 | Portals API (expenses, purchases, equity, assets + depreciation, stock counts, period close) | ✅ done |
 | B7 | Auth & RBAC: Argon2id, TOTP 2FA, hashed sessions, role matrix, Super Admin panel | ✅ done |
 | B8 | Frontend foundation: Pure Ledger design system, responsive shell, auth screens, i18n (en/bn), demo mode | ✅ done |
-| B9 | Dashboards with live data + charts | ⏳ next |
-| B9–B13 | Dashboards, portals UI, reports, Android, deployment | — |
+| B9 | Reporting API, SSE live refresh, validated charts, poisha-exact dashboards | ✅ done |
+| B10–B13 | Portals UI, reports, Android, deployment | ⏳ next |

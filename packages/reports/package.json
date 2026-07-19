@@ -1,0 +1,25 @@
+{
+  "name": "@pfm/reports",
+  "version": "0.1.0",
+  "private": true,
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "test": "vitest run --no-file-parallelism",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@pfm/domain": "workspace:*",
+    "@pfm/ledger": "workspace:*",
+    "@pfm/pipeline": "workspace:*",
+    "pg": "^8.13.1"
+  },
+  "devDependencies": {
+    "@pfm/inventory": "workspace:*",
+    "@types/node": "^22.10.2",
+    "@types/pg": "^8.11.10",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}

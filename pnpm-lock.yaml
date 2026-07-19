@@ -37,6 +37,9 @@ importers:
       '@pfm/portals':
         specifier: workspace:*
         version: link:../../packages/portals
+      '@pfm/reports':
+        specifier: workspace:*
+        version: link:../../packages/reports
       bullmq:
         specifier: ^5.34.3
         version: 5.80.9
@@ -296,6 +299,37 @@ importers:
         specifier: ^8.13.1
         version: 8.22.0
     devDependencies:
+      '@types/node':
+        specifier: ^22.10.2
+        version: 22.20.1
+      '@types/pg':
+        specifier: ^8.11.10
+        version: 8.20.0
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.20.1)
+
+  packages/reports:
+    dependencies:
+      '@pfm/domain':
+        specifier: workspace:*
+        version: link:../domain
+      '@pfm/ledger':
+        specifier: workspace:*
+        version: link:../ledger
+      '@pfm/pipeline':
+        specifier: workspace:*
+        version: link:../pipeline
+      pg:
+        specifier: ^8.13.1
+        version: 8.22.0
+    devDependencies:
+      '@pfm/inventory':
+        specifier: workspace:*
+        version: link:../inventory
       '@types/node':
         specifier: ^22.10.2
         version: 22.20.1

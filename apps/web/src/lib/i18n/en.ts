@@ -87,6 +87,13 @@ export const en = {
   language: "Language",
   darkMode: "Dark mode",
   digitGrouping: "Lakh/crore digits",
+  opexLabel: "Operating expenses",
+  last14days: "Last 14 days",
+  tableView: "Data table",
+  liveDot: "Live",
+  dateLabel: "Date",
+  loading: "Loading…",
+  netProfitShort: "Net profit",
   // states
   posted: "Posted",
   paymentPending: "Payment pending",

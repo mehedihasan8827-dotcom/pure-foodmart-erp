@@ -111,6 +111,14 @@ export async function postEntry(
     [entryNo, entryHash],
   );
 
+  // Live-dashboard signal (B9): NOTIFY fires only when this transaction
+  // commits, so listeners never see uncommitted postings.
+  await client.query(
+    `SELECT pg_notify('pfm_ledger',
+       json_build_object('tenantId', app_tenant_id(), 'entryNo', $1::bigint)::text)`,
+    [entryNo],
+  );
+
   return { entryId, entryNo, period, entryHash };
 }
 

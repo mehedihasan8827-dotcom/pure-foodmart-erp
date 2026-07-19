@@ -1,17 +1,36 @@
 import { Card, FundStageBar, Money, PageHeader, StatusChip } from "../components/ui";
-import { demoDashboard, demoFunds } from "../lib/demo-data";
+import { useFunds } from "../lib/data";
 import { usePrefs } from "../lib/prefs";
 
-/** S4 — the three-stage courier fund board (§6.1). */
+/** S4 — the three-stage courier fund board, served from the ledger (§6.1). */
 export function CourierFundsPage() {
   const { t } = usePrefs();
-  const f = demoFunds;
+  const { data: f, error, live } = useFunds();
+
+  if (error) {
+    return (
+      <p className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-900/40 dark:text-red-200">
+        {error}
+      </p>
+    );
+  }
+  if (!f) return <p className="text-sm text-gray-500">{t("loading")}</p>;
+
+  const maxAging = Math.max(...f.aging.map((x) => Number(x.amount)), 1);
+
   return (
     <div className="mx-auto max-w-5xl space-y-6">
-      <PageHeader titleKey="navCourierFunds" />
+      <PageHeader titleKey="navCourierFunds">
+        {live && (
+          <span className="flex items-center gap-1.5 rounded-full bg-brand-100 px-2.5 py-1 text-xs font-semibold text-brand-700 dark:bg-brand-800 dark:text-brand-200">
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-moneyin" />
+            {t("liveDot")}
+          </span>
+        )}
+      </PageHeader>
       <FundStageBar
-        waiting={demoDashboard.cash.courierWaiting}
-        pending={demoDashboard.cash.courierPending}
+        waiting={f.ledger.waiting1110}
+        pending={f.ledger.pending1115}
         settled={f.settledThisMonth}
       />
 
@@ -26,12 +45,15 @@ export function CourierFundsPage() {
                 <div>
                   <p className="font-medium">{o.orderRef}</p>
                   <p className="text-xs text-gray-500">
-                    {o.consignmentId} · {o.ageDays} {t("days")}
+                    {o.consignmentId ?? "—"} · {o.ageDays} {t("days")}
                   </p>
                 </div>
                 <Money amount={o.cod} tone="pending" />
               </li>
             ))}
+            {f.waiting.length === 0 && (
+              <li className="py-2 text-xs text-gray-400">{t("allClear")}</li>
+            )}
           </ul>
         </Card>
 
@@ -46,12 +68,15 @@ export function CourierFundsPage() {
                   <div>
                     <p className="font-medium">{inv.invoiceRef}</p>
                     <p className="text-xs text-gray-500">
-                      {inv.orders} orders · exp. {inv.expected}
+                      {inv.orders} orders · {inv.statementDate}
                     </p>
                   </div>
                   <Money amount={inv.gross} tone="pending" />
                 </li>
               ))}
+              {f.pending.length === 0 && (
+                <li className="py-2 text-xs text-gray-400">{t("allClear")}</li>
+              )}
             </ul>
           </Card>
 
@@ -60,37 +85,29 @@ export function CourierFundsPage() {
               {t("agingTitle")}
             </h2>
             <div className="space-y-1.5">
-              {f.aging.map((b) => {
-                const max = Math.max(...f.aging.map((x) => Number(x.amount)), 1);
-                const pct = (Number(b.amount) / max) * 100;
-                return (
-                  <div key={b.bucket} className="flex items-center gap-2 text-xs">
-                    <span className="w-12 text-gray-500">{b.bucket}</span>
-                    <div className="h-3 flex-1 rounded bg-gray-100 dark:bg-brand-800">
-                      <div
-                        className="h-3 rounded bg-jaggery-400"
-                        style={{ width: `${pct}%` }}
-                      />
-                    </div>
-                    <Money amount={b.amount} className="w-24 text-right" />
+              {f.aging.map((b) => (
+                <div key={b.bucket} className="flex items-center gap-2 text-xs">
+                  <span className="w-12 text-gray-500">{b.bucket}</span>
+                  <div className="h-3 flex-1 rounded bg-gray-100 dark:bg-brand-800">
+                    <div
+                      className="h-3 rounded bg-jaggery-400"
+                      style={{ width: `${(Number(b.amount) / maxAging) * 100}%` }}
+                    />
                   </div>
-                );
-              })}
+                  <Money amount={b.amount} className="w-24 text-right" />
+                </div>
+              ))}
             </div>
           </Card>
 
-          <Card className={f.balanceCheck.ok ? "border-brand-300" : "border-red-400"}>
+          <Card className={f.ledger.matchesOrders ? "border-brand-300" : "border-red-400"}>
             <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400">
               {t("balanceCheck")}
             </h2>
             <p className="mt-1 flex items-center gap-2 text-sm">
-              {f.balanceCheck.ok ? (
-                <StatusChip state="settled" />
-              ) : (
-                <StatusChip state="exception" />
-              )}
+              <StatusChip state={f.ledger.matchesOrders ? "settled" : "exception"} />
               <span>{t("balanceMatches")}</span>
-              <Money amount={f.balanceCheck.ledger} className="ml-auto font-semibold" />
+              <Money amount={f.ledger.waiting1110} className="ml-auto font-semibold" />
             </p>
           </Card>
         </div>
