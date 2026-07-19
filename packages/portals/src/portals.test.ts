@@ -5,7 +5,7 @@
  * locks the period at the database level.
  */
 import { Money } from "@pfm/domain";
-import { createItem } from "@pfm/inventory";
+import { checkInventoryIntegrity, createItem } from "@pfm/inventory";
 import { accountBalance, trialBalance, withTransaction } from "@pfm/ledger";
 import { Pool, type PoolClient } from "pg";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
@@ -18,6 +18,7 @@ import {
   recordCapitalInjection,
   recordCashDrawing,
   recordDrawingInKind,
+  postOpeningBalances,
   recordExpense,
   recordPurchase,
   recordStockCount,
@@ -349,5 +350,46 @@ describe("period close (§10.4)", () => {
       c.query("SELECT action FROM audit_log WHERE action LIKE 'PERIOD%' ORDER BY id"),
     );
     expect(audits.rows.map((r) => r.action)).toEqual(["PERIOD_LOCKED", "PERIOD_UNLOCKED"]);
+  });
+});
+
+describe("opening balances (§16 go-live)", () => {
+  it("posts the genesis entry with derived stock lines and capital plug, once only", async () => {
+    const result = await postOpeningBalances(pool, T1, {
+      asOf: "2026-07-01",
+      lines: [
+        { accountCode: "1010", amount: "12500", side: "DEBIT" },
+        { accountCode: "1020", amount: "150000", side: "DEBIT" },
+        { accountCode: "1110", amount: "46000", side: "DEBIT" },
+        { accountCode: "2010", amount: "34600", side: "CREDIT" },
+      ],
+      stockLines: [
+        { sku: "RAW-JAG", qty: "100", unitCost: "118" },
+        { sku: "CTN-5KG", qty: "300", unitCost: "22" },
+      ],
+    });
+    // stock 11,800 + 6,600; net Dr 227,700 − Cr 34,600 → plug Cr 3010 192,300
+    expect(result.plugged.toTakaString()).toBe("192300.00");
+    expect(await bal("3010")).toBe("192300.00");
+    expect(await bal("1310")).toBe("11800.00");
+    expect(await bal("1320")).toBe("6600.00");
+    const view = await withTransaction(pool, T1, async (c) => ({
+      tb: await trialBalance(c),
+      i3: await checkInventoryIntegrity(c),
+      stock: (await c.query(
+        "SELECT s.on_hand::text, s.avg_cost::text FROM item_stock s JOIN items i ON i.id=s.item_id WHERE i.sku=\'RAW-JAG\'",
+      )).rows[0],
+    }));
+    expect(view.tb.balanced).toBe(true);
+    expect(view.i3.ok).toBe(true);
+    expect(view.stock.on_hand).toBe("100.000");
+    expect(view.stock.avg_cost).toBe("118.000000");
+
+    await expect(
+      postOpeningBalances(pool, T1, {
+        asOf: "2026-07-02",
+        lines: [{ accountCode: "1010", amount: "1", side: "DEBIT" }],
+      }),
+    ).rejects.toThrow(/once-only/);
   });
 });

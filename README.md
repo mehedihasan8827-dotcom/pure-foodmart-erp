@@ -65,4 +65,5 @@ pnpm dev:web                    # http://localhost:5173
 | B7 | Auth & RBAC: Argon2id, TOTP 2FA, hashed sessions, role matrix, Super Admin panel | ✅ done |
 | B8 | Frontend foundation: Pure Ledger design system, responsive shell, auth screens, i18n (en/bn), demo mode | ✅ done |
 | B9 | Reporting API, SSE live refresh, validated charts, poisha-exact dashboards | ✅ done |
-| B10–B13 | Portals UI, reports, Android, deployment | ⏳ next |
+| B13 | Production scaffolding: runtime DB roles, Docker images, deploy configs, opening balances, runbook | ✅ done |
+| B10–B12 | Portals UI, reports/close UI, Android wrap | ⏳ next |

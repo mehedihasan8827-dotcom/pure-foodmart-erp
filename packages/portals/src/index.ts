@@ -48,3 +48,10 @@ export {
   type CloseGate,
   type ClosePeriodResult,
 } from "./close";
+export {
+  postOpeningBalances,
+  type OpeningBalanceLine,
+  type OpeningBalancesInput,
+  type OpeningBalancesResult,
+  type OpeningStockLine,
+} from "./opening";

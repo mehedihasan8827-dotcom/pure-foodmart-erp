@@ -66,3 +66,14 @@ jobs:
 
       - name: Worker boot smoke check
         run: WORKER_RUN_ONCE=1 node apps/worker/dist/main.js
+
+  docker-images:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build API image
+        run: docker build -f infra/api.Dockerfile -t pfm-api:ci .
+      - name: Build worker image
+        run: docker build -f infra/worker.Dockerfile -t pfm-worker:ci .
+      - name: Build web image
+        run: docker build -f infra/web.Dockerfile -t pfm-web:ci .
