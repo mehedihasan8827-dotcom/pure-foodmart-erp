@@ -3,9 +3,11 @@ import {
   canonicalNuportOrderSchema,
   type CanonicalNuportOrder,
 } from "@pfm/domain";
-import { NeedsBomError, deductForSale, recordInbound, linkMovementsToEntry } from "@pfm/inventory";
+import { deductForSale, recordInbound, linkMovementsToEntry } from "@pfm/inventory";
 import { postEntry, withTransaction, type PostedEntry } from "@pfm/ledger";
 import type { Pool, PoolClient } from "pg";
+import { postDeliveryFromDb } from "../shared/delivery";
+import { raiseAlert, setOrderState } from "../shared/util";
 
 export type ProcessOutcome =
   | "POSTED"            // revenue + COGS posted
@@ -236,7 +238,7 @@ async function applyStateMachine(
       return handleReturned(c, row, o);
     case "cancelled":
       if (row.fin_state === "SYNCED") {
-        await setState(c, orderId, "CLOSED_NO_REVENUE");
+        await setOrderState(c, orderId, "CLOSED_NO_REVENUE");
         return { outcome: "CLOSED_NO_REVENUE", orderId };
       }
       if (row.fin_state === "CLOSED_NO_REVENUE") return { outcome: "DUPLICATE", orderId };
@@ -257,79 +259,12 @@ async function handleDelivered(
 ): Promise<ProcessResult> {
   const orderId = Number(row.id);
   if (row.fin_state !== "SYNCED") {
-    // Revenue posts exactly once — replays and webhook/cron races land here.
+    // Revenue posts exactly once — replays, webhook/cron races, and the
+    // Steadfast poller having posted first all land here.
     return { outcome: "DUPLICATE", orderId };
   }
-
-  // §14.2: any unmapped SKU freezes the order BEFORE money moves.
-  const unmapped = await c.query<{ nuport_sku: string }>(
-    "SELECT nuport_sku FROM sales_order_lines WHERE order_id = $1 AND item_id IS NULL",
-    [orderId],
-  );
-  if (unmapped.rows.length > 0) {
-    await raiseAlert(c, "UNMAPPED_SKU", {
-      orderId, orderRef: o.orderRef,
-      skus: unmapped.rows.map((r) => r.nuport_sku),
-    });
-    await setState(c, orderId, "EXCEPTION");
-    return { outcome: "EXCEPTION", orderId };
-  }
-
-  const deliveredOn = (o.deliveredAt ?? new Date().toISOString()).slice(0, 10);
-  const product = Money.fromTaka(o.productAmount);
-  const delivery = Money.fromTaka(o.deliveryCharge);
-  const isCod = o.paymentMode === "COD";
-
-  // JE-A (§4.1 / §4.2): COD debits courier funds; prepaid clears the advance.
-  const revenueLines = [
-    isCod
-      ? { accountCode: "1110", debit: Money.fromTaka(o.codAmount) }
-      : { accountCode: "2110", debit: product.add(delivery) },
-    { accountCode: "4010", credit: product },
-    ...(delivery.isZero() ? [] : [{ accountCode: "4020", credit: delivery }]),
-  ];
-  const revenueEntry = await postEntry(c, {
-    entryDate: deliveredOn,
-    memo: `Revenue ${o.orderRef}`,
-    sourceType: "NUPORT_ORDER",
-    sourceId: orderId,
-    eventCode: isCod ? "SALE_DELIVERED_COD" : "SALE_DELIVERED_PREPAID",
-    lines: revenueLines,
-  });
-
-  // JE-B in the same transaction; a missing recipe defers COGS, not revenue.
-  try {
-    const cogs = await deductForSale(c, {
-      orderId,
-      deliveredOn,
-      memo: `COGS ${o.orderRef}`,
-      lines: o.lines.map((l) => ({ sku: l.sku, qty: l.qty })),
-    });
-    await c.query(
-      `UPDATE sales_orders SET fin_state='REVENUE_POSTED', delivered_at=$2,
-         revenue_entry_id=$3, cogs_entry_id=$4, cogs_amount=$5, updated_at=now()
-       WHERE id=$1`,
-      [
-        orderId, o.deliveredAt ?? new Date().toISOString(),
-        revenueEntry.entryId, cogs.entry?.entryId ?? null,
-        cogs.totalCogs.toTakaString(),
-      ],
-    );
-    await updateLineBoms(c, orderId, cogs.bomIdBySku);
-    return { outcome: "POSTED", orderId, revenueEntry, cogsEntry: cogs.entry };
-  } catch (err) {
-    if (!(err instanceof NeedsBomError)) throw err;
-    await raiseAlert(c, "NEEDS_BOM", {
-      orderId, orderRef: o.orderRef, skus: err.skusWithoutBom,
-    });
-    await c.query(
-      `UPDATE sales_orders SET fin_state='NEEDS_BOM', delivered_at=$2,
-         revenue_entry_id=$3, updated_at=now()
-       WHERE id=$1`,
-      [orderId, o.deliveredAt ?? new Date().toISOString(), revenueEntry.entryId],
-    );
-    return { outcome: "NEEDS_BOM", orderId, revenueEntry, cogsEntry: null };
-  }
+  const result = await postDeliveryFromDb(c, orderId, o.deliveredAt ?? null);
+  return { ...result, orderId };
 }
 
 async function handleReturned(
@@ -449,20 +384,6 @@ async function updateLineBoms(
       [orderId, sku, bomId],
     );
   }
-}
-
-async function setState(c: PoolClient, orderId: number, state: string): Promise<void> {
-  await c.query(
-    "UPDATE sales_orders SET fin_state=$2, updated_at=now() WHERE id=$1",
-    [orderId, state],
-  );
-}
-
-async function raiseAlert(c: PoolClient, code: string, details: unknown): Promise<void> {
-  await c.query(
-    "INSERT INTO integrity_alerts (invariant_code, severity, details) VALUES ($1,'ERROR',$2)",
-    [code, JSON.stringify(details)],
-  );
 }
 
 async function markEvent(

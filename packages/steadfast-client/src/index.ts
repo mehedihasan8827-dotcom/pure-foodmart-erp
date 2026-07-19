@@ -1,6 +1,11 @@
 /**
- * @pfm/steadfast-client — Typed Steadfast Courier API client — statuses, payout invoices, balance (arrives in B5, blueprint §2.3)
- *
- * B0 scaffold stub: real implementation lands in B5.
+ * @pfm/steadfast-client — typed Steadfast Courier API client: statuses,
+ * merchant balance, payout invoices (capability-gated), retry/backoff.
  */
-export const PACKAGE = "@pfm/steadfast-client";
+export {
+  SteadfastApiError,
+  SteadfastCapabilityError,
+  SteadfastClient,
+  mapDeliveryStatus,
+  type SteadfastClientConfig,
+} from "./client";

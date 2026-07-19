@@ -20,3 +20,43 @@ export {
   type NuportOrderSource,
   type SyncSummary,
 } from "./nuport/sync";
+export {
+  CredentialsError,
+  openCredentials,
+  sealCredentials,
+} from "./credentials";
+export { postDeliveryFromDb, type DeliveryPostResult } from "./shared/delivery";
+export {
+  ingestSteadfastEvent,
+  markSteadfastEvent,
+  type SteadfastEventKind,
+  type SteadfastIngestInput,
+  type SteadfastIngestResult,
+} from "./steadfast/ingest";
+export {
+  processSteadfastStatus,
+  type StatusOutcome,
+  type StatusResult,
+} from "./steadfast/status";
+export {
+  checkCourierFunds,
+  confirmPayoutDisbursed,
+  recordPayoutInvoice,
+  type ConfirmDisbursementInput,
+  type ConfirmDisbursementResult,
+  type RecordInvoiceResult,
+} from "./steadfast/settlement";
+export {
+  CsvParseError,
+  parseSteadfastStatementCsv,
+  type CsvColumnMap,
+} from "./steadfast/csv";
+export {
+  checkSteadfastBalanceDrift,
+  type BalanceDriftReport,
+} from "./steadfast/balance";
+export {
+  runSteadfastPoll,
+  type SteadfastPollSource,
+  type SteadfastPollSummary,
+} from "./steadfast/poll";

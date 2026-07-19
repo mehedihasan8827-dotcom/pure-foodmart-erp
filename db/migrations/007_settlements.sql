@@ -14,7 +14,10 @@ CREATE TABLE steadfast_events (
   received_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
   processed_at   TIMESTAMPTZ,
   error          TEXT,
-  UNIQUE (tenant_id, event_kind, consignment_id, invoice_ref, payload_hash)
+  -- NULLS NOT DISTINCT: consignment/invoice are NULL for balance snapshots
+  -- and kind-scoped events; plain UNIQUE would treat every NULL row as
+  -- distinct and silently break poll dedup.
+  UNIQUE NULLS NOT DISTINCT (tenant_id, event_kind, consignment_id, invoice_ref, payload_hash)
 );
 CREATE INDEX idx_sf_consignment ON steadfast_events(tenant_id, consignment_id);
 

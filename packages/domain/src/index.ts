@@ -5,6 +5,16 @@ export {
   type CanonicalNuportOrder,
   type NuportOrderStatus,
 } from "./nuport";
+export {
+  canonicalPayoutInvoiceSchema,
+  canonicalSteadfastStatusSchema,
+  payoutInvoiceLineSchema,
+  steadfastDeliveryStatusSchema,
+  type CanonicalPayoutInvoice,
+  type CanonicalSteadfastStatus,
+  type PayoutInvoiceLine,
+  type SteadfastDeliveryStatus,
+} from "./steadfast";
 
 /**
  * Shared domain types grow here batch by batch:
