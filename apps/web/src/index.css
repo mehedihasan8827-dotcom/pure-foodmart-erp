@@ -7,3 +7,14 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
 }
+
+/* Tabular numerals in every money context (§17.2). */
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+@layer base {
+  body {
+    @apply bg-gray-50 text-gray-900 dark:bg-brand-950 dark:text-gray-100;
+  }
+}
