@@ -1,24 +1,24 @@
--- 012: Integrity alerts + balance reporting view (blueprint §10)
+-- 012: Integrity alerts + balance reporting view — per tenant (§10)
 
--- Violated invariants (I1..I6, HASH_CHAIN, STOCK_REPLAY, SF_BALANCE, ...)
--- land here, surface in the exception center, and block period close.
 CREATE TABLE integrity_alerts (
   id              BIGSERIAL PRIMARY KEY,
-  invariant_code  VARCHAR(16) NOT NULL,
-  severity        VARCHAR(8)  NOT NULL DEFAULT 'ERROR',   -- WARN/ERROR
+  tenant_id       INT NOT NULL DEFAULT app_tenant_id() REFERENCES tenants(id),
+  invariant_code  VARCHAR(16) NOT NULL,          -- I1..I6, NEG_STOCK, HASH_CHAIN, ...
+  severity        VARCHAR(8)  NOT NULL DEFAULT 'ERROR',
   details         JSONB NOT NULL,
-  status          VARCHAR(16) NOT NULL DEFAULT 'OPEN',    -- OPEN/RESOLVED
+  status          VARCHAR(16) NOT NULL DEFAULT 'OPEN',
   created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
   resolved_at     TIMESTAMPTZ,
   resolved_by     INT REFERENCES users(id),
   resolution_note TEXT
 );
-CREATE INDEX idx_alerts_open ON integrity_alerts(status) WHERE status = 'OPEN';
+CREATE INDEX idx_alerts_open ON integrity_alerts(tenant_id, status) WHERE status = 'OPEN';
 
--- Account balances are NEVER stored — always derived from journal_lines (P1).
--- balance is signed by the account's normal side.
-CREATE VIEW account_balances AS
+-- Balances are derived, never stored (P1). security_invoker: the view runs
+-- with the caller's RLS context, so each tenant sees only their accounts.
+CREATE VIEW account_balances WITH (security_invoker = true) AS
 SELECT a.id   AS account_id,
+       a.tenant_id,
        a.code,
        a.name,
        a.type,

@@ -114,14 +114,27 @@ export async function postEntry(
   return { entryId, entryNo, period, entryHash };
 }
 
-/** Run fn inside BEGIN/COMMIT with rollback on failure. */
+/**
+ * Run fn inside BEGIN/COMMIT with rollback on failure, with the tenant
+ * context set for the whole transaction. Every RLS policy and every
+ * tenant_id column default reads this context — queries inside fn are
+ * automatically scoped to (and stamped with) this tenant, and rows of
+ * other tenants are invisible and un-writable.
+ */
 export async function withTransaction<T>(
   pool: Pool,
+  tenantId: number,
   fn: (client: PoolClient) => Promise<T>,
 ): Promise<T> {
+  if (!Number.isInteger(tenantId) || tenantId <= 0) {
+    throw new LedgerError(`Invalid tenantId: ${tenantId}`);
+  }
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
+    await client.query("SELECT set_config('app.tenant_id', $1, true)", [
+      String(tenantId),
+    ]);
     const result = await fn(client);
     await client.query("COMMIT");
     return result;

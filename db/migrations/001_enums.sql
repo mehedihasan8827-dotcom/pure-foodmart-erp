@@ -1,5 +1,8 @@
 -- 001: Enumerated types (blueprint §9.0)
 
+CREATE TYPE tenant_status   AS ENUM ('ACTIVE','SUSPENDED','CANCELLED');
+CREATE TYPE tenant_role     AS ENUM ('TENANT_ADMIN','ACCOUNTANT','STAFF','VIEWER');
+CREATE TYPE integration_provider AS ENUM ('NUPORT','STEADFAST');
 CREATE TYPE account_type    AS ENUM ('ASSET','LIABILITY','EQUITY','INCOME','EXPENSE');
 CREATE TYPE normal_side     AS ENUM ('DEBIT','CREDIT');
 CREATE TYPE item_kind       AS ENUM ('RAW','PACKAGING','FINISHED');

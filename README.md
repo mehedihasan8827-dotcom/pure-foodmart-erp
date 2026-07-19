@@ -1,12 +1,21 @@
 # Pure Foodmart ERP
 
-Cloud Financial ERP & cash-flow management system for the Pure Foodmart
-e-commerce brand. Ingests sales from **Nuport** (OMS) and courier fund /
-payout data from **Steadfast**, and turns them into an airtight
-double-entry ledger: automated revenue + BOM-driven COGS posting,
+**Multi-tenant SaaS** financial ERP & cash-flow platform for e-commerce
+merchants. Each merchant (tenant) connects their own **Nuport** (OMS) and
+**Steadfast** (courier) API credentials and gets an airtight, fully
+isolated double-entry ledger: automated revenue + BOM-driven COGS posting,
 three-stage courier fund tracking, partner equity, fixed assets, and
 real-time dashboards. Desktop web (PWA) + Android (Capacitor) from one
 codebase.
+
+**Tenancy model:** single Postgres, shared schema, `tenant_id` everywhere,
+enforced by **Row-Level Security** (FORCEd — even the table owner is
+subject to it). Every transaction sets `app.tenant_id`; per-tenant gapless
+ledger sequences, hash chains, chart of accounts, and fiscal periods are
+created atomically by `provision_tenant()`.
+**Roles:** platform **Super Admin** (`users.is_super_admin`, BYPASSRLS ops
+role in production) and per-merchant memberships in `tenant_users`:
+`TENANT_ADMIN` / `ACCOUNTANT` / `STAFF` / `VIEWER`.
 
 **Architecture contract:** [`docs/pure-foodmart-erp-blueprint.md` in the zikr-light repo](https://github.com/mehedihasan8827-dotcom/zikr-light/blob/main/docs/pure-foodmart-erp-blueprint.md) — every design decision lives there; this repo implements it batch by batch (blueprint §18.3).
 
@@ -48,7 +57,8 @@ pnpm dev:web                    # http://localhost:5173
 | B0 | Monorepo scaffold, docker-compose, CI, app skeletons | ✅ done |
 | B1 | Database migrations + seed (blueprint §9, §3) | ✅ done |
 | B2 | Ledger core (posting engine, hash chain, DB-enforced invariants) | ✅ done |
-| B3 | Inventory/BOM engine | ⏳ next |
-| B4 | Nuport pipeline | — |
+| B2.5 | Multi-tenant SaaS refactor: RLS isolation, tenant provisioning, RBAC model | ✅ done |
+| B3 | Inventory/BOM engine (MWA costing, merge-explosion, COGS auto-deduction) | ✅ done |
+| B4 | Nuport pipeline | ⏳ next |
 | B5 | Steadfast pipeline | — |
 | B6–B13 | Portals, auth, frontend, Android, deployment | — |
