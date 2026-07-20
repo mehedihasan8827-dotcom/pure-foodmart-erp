@@ -47,7 +47,11 @@ function sha256(token: string): string {
  * audited without revealing which factor failed to the caller beyond
  * the distinction the UX needs (TOTP_REQUIRED).
  */
-export async function login(pool: Pool, input: LoginInput): Promise<LoginResult> {
+export async function login(
+  pool: Pool,
+  platformPool: Pool,
+  input: LoginInput,
+): Promise<LoginResult> {
   const email = input.email.trim().toLowerCase();
   const res = await pool.query<{
     id: number;
@@ -89,11 +93,12 @@ export async function login(pool: Pool, input: LoginInput): Promise<LoginResult>
     "INSERT INTO audit_log (user_id, action, entity, entity_id) VALUES ($1::int,'LOGIN','users',$1::bigint)",
     [user.id],
   );
-  return { token, principal: await loadPrincipal(pool, user.id) };
+  return { token, principal: await loadPrincipal(pool, platformPool, user.id) };
 }
 
 export async function validateSession(
   pool: Pool,
+  platformPool: Pool,
   token: string,
 ): Promise<SessionPrincipal> {
   const res = await pool.query<{
@@ -114,7 +119,7 @@ export async function validateSession(
   if (Date.now() - new Date(row.last_used_at).getTime() > TOUCH_INTERVAL_MS) {
     await pool.query("UPDATE sessions SET last_used_at = now() WHERE id = $1", [row.id]);
   }
-  return loadPrincipal(pool, row.user_id);
+  return loadPrincipal(pool, platformPool, row.user_id);
 }
 
 export async function revokeSession(pool: Pool, token: string): Promise<void> {
@@ -124,7 +129,22 @@ export async function revokeSession(pool: Pool, token: string): Promise<void> {
   );
 }
 
-async function loadPrincipal(pool: Pool, userId: number): Promise<SessionPrincipal> {
+/**
+ * The memberships join reads `tenants`, which is RLS-protected
+ * (`id = app_tenant_id()`) — but this runs before any single tenant
+ * context is chosen (a user's memberships can span many tenants), so no
+ * app.tenant_id value could ever be "correct" here under pfm_app. The
+ * query itself is already scoped to the caller's own validated userId
+ * (not attacker-influenced), so RLS wasn't providing meaningful
+ * protection for this specific read — it was only breaking it. Runs on
+ * the BYPASSRLS platform pool for that reason; `users` has no RLS so
+ * stays on the regular pool.
+ */
+async function loadPrincipal(
+  pool: Pool,
+  platformPool: Pool,
+  userId: number,
+): Promise<SessionPrincipal> {
   const user = await pool.query<{
     id: number;
     email: string;
@@ -136,7 +156,7 @@ async function loadPrincipal(pool: Pool, userId: number): Promise<SessionPrincip
     [userId],
   );
   const u = user.rows[0]!;
-  const memberships = await pool.query<{
+  const memberships = await platformPool.query<{
     tenant_id: number;
     role: TenantRole;
     name: string;

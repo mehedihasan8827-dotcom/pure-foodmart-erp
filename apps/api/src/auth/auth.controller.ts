@@ -21,7 +21,7 @@ import {
 } from "@pfm/auth";
 import type { Pool } from "pg";
 import { z } from "zod";
-import { PG_POOL } from "../db/database.module";
+import { PG_PLATFORM_POOL, PG_POOL } from "../db/database.module";
 import { parseBody } from "../portal/zod";
 import { AuthErrorFilter } from "./auth-error.filter";
 import {
@@ -37,7 +37,10 @@ const TOTP_ISSUER = "Pure Foodmart ERP";
 @Controller("auth")
 @UseFilters(AuthErrorFilter)
 export class AuthController {
-  constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
+  constructor(
+    @Inject(PG_POOL) private readonly pool: Pool,
+    @Inject(PG_PLATFORM_POOL) private readonly platformPool: Pool,
+  ) {}
 
   /** One-time first-run: creates the FIRST super admin, then goes dead. */
   @Post("bootstrap")
@@ -68,7 +71,7 @@ export class AuthController {
       }),
       body,
     );
-    const result = await login(this.pool, {
+    const result = await login(this.pool, this.platformPool, {
       ...dto,
       ip: req.ip ?? null,
       userAgent: (req.headers["user-agent"] as string) ?? null,

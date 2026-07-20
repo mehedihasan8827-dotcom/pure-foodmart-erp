@@ -86,17 +86,35 @@ export async function inviteToTenant(
     }));
     created = true;
   }
-  await pool.query(
-    `INSERT INTO tenant_users (user_id, tenant_id, role, invited_by)
-     VALUES ($1,$2,$3,$4)
-     ON CONFLICT (user_id, tenant_id) DO UPDATE SET role = EXCLUDED.role`,
-    [userId, input.tenantId, input.role, input.invitedBy],
-  );
-  await pool.query(
-    `INSERT INTO audit_log (tenant_id, user_id, action, entity, entity_id, after_json)
-     VALUES ($1,$2,'MEMBER_INVITED','tenant_users',$3,$4)`,
-    [input.tenantId, input.invitedBy, userId, JSON.stringify({ email, role: input.role })],
-  );
+  // tenant_users is un-policied (see 011_users_audit.sql), but audit_log is
+  // RLS-enforced and this writes a real tenant_id — set app.tenant_id for
+  // this transaction so pfm_app's RLS check (tenant_id = app_tenant_id())
+  // can actually pass. Without this, every invite (not just super-admin
+  // ones) would 500 on the audit insert.
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    await client.query("SELECT set_config('app.tenant_id', $1, true)", [
+      String(input.tenantId),
+    ]);
+    await client.query(
+      `INSERT INTO tenant_users (user_id, tenant_id, role, invited_by)
+       VALUES ($1,$2,$3,$4)
+       ON CONFLICT (user_id, tenant_id) DO UPDATE SET role = EXCLUDED.role`,
+      [userId, input.tenantId, input.role, input.invitedBy],
+    );
+    await client.query(
+      `INSERT INTO audit_log (tenant_id, user_id, action, entity, entity_id, after_json)
+       VALUES ($1,$2,'MEMBER_INVITED','tenant_users',$3,$4)`,
+      [input.tenantId, input.invitedBy, userId, JSON.stringify({ email, role: input.role })],
+    );
+    await client.query("COMMIT");
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  } finally {
+    client.release();
+  }
   return { userId, created };
 }
 

@@ -10,7 +10,7 @@ import {
 import { Reflector } from "@nestjs/core";
 import type { SessionPrincipal, TenantRole } from "@pfm/auth";
 import type { Pool } from "pg";
-import { PG_POOL } from "../db/database.module";
+import { PG_PLATFORM_POOL } from "../db/database.module";
 
 export const ROLES_KEY = "pfm:roles";
 
@@ -23,12 +23,19 @@ export const Roles = (...roles: TenantRole[]) => SetMetadata(ROLES_KEY, roles);
  *  - membership must exist, tenant must be ACTIVE, role must be allowed
  *  - Super Admins bypass membership (platform overrides) — every mutating
  *    override is written to the audit log (§19.2)
+ *
+ * The only query this guard runs is the SA_OVERRIDE audit insert below,
+ * reached exclusively when principal.isSuperAdmin is true. It writes a
+ * real (non-null) tenant_id with no app.tenant_id session context, which
+ * pfm_app's RLS can never satisfy — so it uses the BYPASSRLS platform pool.
+ * Regular tenant members never hit this branch, so their requests still
+ * run entirely under RLS as before.
  */
 @Injectable()
 export class TenantRoleGuard implements CanActivate {
   constructor(
     private readonly reflector: Reflector,
-    @Inject(PG_POOL) private readonly pool: Pool,
+    @Inject(PG_PLATFORM_POOL) private readonly pool: Pool,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
