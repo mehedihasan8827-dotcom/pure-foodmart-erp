@@ -11,7 +11,7 @@ import {
 import type { SessionPrincipal } from "@pfm/auth";
 import type { Pool } from "pg";
 import { z } from "zod";
-import { PG_POOL } from "../db/database.module";
+import { PG_PLATFORM_POOL } from "../db/database.module";
 import { parseBody } from "../portal/zod";
 import { AuthErrorFilter } from "./auth-error.filter";
 import { AuthGuard, CurrentUser } from "./auth.guard";
@@ -20,12 +20,18 @@ import { SuperAdminGuard } from "./roles.guard";
 /**
  * Super Admin Panel backend (§19.2): manage tenants/subscriptions,
  * global platform health. Every mutation is audited at platform level.
+ *
+ * Uses PG_PLATFORM_POOL (pfm_platform, BYPASSRLS) rather than the shared
+ * pfm_app pool: provisioning writes the `tenants` row before any tenant
+ * context exists, which the `tenants`/`audit_log` RLS policies can never
+ * satisfy under pfm_app. See db/migrations/013_multitenancy_rls.sql and
+ * 016_runtime_roles.sql for the documented intent this restores.
  */
 @Controller("admin")
 @UseGuards(AuthGuard, SuperAdminGuard)
 @UseFilters(AuthErrorFilter)
 export class AdminController {
-  constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
+  constructor(@Inject(PG_PLATFORM_POOL) private readonly pool: Pool) {}
 
   @Get("tenants")
   async tenants() {
