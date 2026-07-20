@@ -8,7 +8,7 @@ import {
 } from "@nestjs/common";
 import { validateSession, type SessionPrincipal } from "@pfm/auth";
 import type { Pool } from "pg";
-import { PG_POOL } from "../db/database.module";
+import { PG_PLATFORM_POOL, PG_POOL } from "../db/database.module";
 
 export const SESSION_COOKIE = "pfm_session";
 
@@ -51,14 +51,17 @@ export function extractToken(req: {
  */
 @Injectable()
 export class AuthGuard implements CanActivate {
-  constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
+  constructor(
+    @Inject(PG_POOL) private readonly pool: Pool,
+    @Inject(PG_PLATFORM_POOL) private readonly platformPool: Pool,
+  ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const req = context.switchToHttp().getRequest();
     const token = extractToken(req);
     if (!token) throw new UnauthorizedException("Authentication required");
     try {
-      req.auth = await validateSession(this.pool, token);
+      req.auth = await validateSession(this.pool, this.platformPool, token);
       req.sessionToken = token;
       return true;
     } catch {
